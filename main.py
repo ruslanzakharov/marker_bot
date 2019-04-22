@@ -37,22 +37,18 @@ def handle_dialog(res, req):
 
     if req['session']['new']:
         res['response']['text'] = 'Введите координаты'
+        return
 
     req_text = req['request']['original_utterance']
-    if not session_storage:
-        session_storage['закладка1'] = req_text
+    map = set_marker(req_text)
 
-        return
+    res['response']['text'] = ''
+    res['card'] = {
+        'type': 'BigImage',
+        'image_id': map,
+    }
 
-    if session_storage:
-        map = set_marker(session_storage['закладка1'])
-
-        res['card'] = {
-            'type': 'BigImage',
-            'image_id': map,
-        }
-
-        return
+    return
 
 
 def set_marker(coord):
@@ -67,7 +63,7 @@ def set_marker(coord):
     }
 
     map = requests.get(url_static_api, params).content
-    logging.info(f'Request: {map}')
+    logging.info(f'set_marker: {map}')
 
     # Размещаем изображение в Яндекс.Диалоги и получаем id
     url_ya_dialogs = f'https://dialogs.yandex.net/api/v1/skills/{SKILL_ID}/images'
