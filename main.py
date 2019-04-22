@@ -42,7 +42,7 @@ def handle_dialog(res, req):
     req_text = req['request']['original_utterance']
     map = set_marker(req_text)
 
-    res['response']['text'] = ''
+    res['response']['text'] = 'Фото'
     res['card'] = {
         'type': 'BigImage',
         'image_id': map,
@@ -63,7 +63,6 @@ def set_marker(coord):
     }
 
     map = requests.get(url_static_api, params).content
-    logging.info(f'set_marker: {map}')
 
     # Размещаем изображение в Яндекс.Диалоги и получаем id
     url_ya_dialogs = f'https://dialogs.yandex.net/api/v1/skills/{SKILL_ID}/images'
