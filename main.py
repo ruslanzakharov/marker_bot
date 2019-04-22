@@ -66,7 +66,7 @@ def set_marker(coord):
         'll': coord,
     }
 
-    map = requests.get(url_static_api, params)
+    map = requests.get(url_static_api, params).content
     logging.info(f'Request: {map}')
 
     # Размещаем изображение в Яндекс.Диалоги и получаем id
