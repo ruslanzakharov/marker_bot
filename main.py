@@ -62,19 +62,19 @@ def set_marker(coord):
     url_static_api = 'https://static-maps.yandex.ru/1.x/'
 
     params = {
-        'l': 'sat,sk1',
-        'll': 'coord',
+        'l': 'sat,skl',
+        'll': coord,
     }
 
     map = requests.get(url_static_api, params)
-    print(map)
+    logging.info(f'Request: {map}')
 
     # Размещаем изображение в Яндекс.Диалоги и получаем id
     url_ya_dialogs = f'https://dialogs.yandex.net/api/v1/skills/{SKILL_ID}/images'
 
     files = {'file': map}
     headers = {
-        'Authorization': 'QAuth AQAAAAATNA8lAAT7o-7tTToNjUOljgg7VeV1pdY'
+        'Authorization': 'OAuth AQAAAAATNA8lAAT7o-7tTToNjUOljgg7VeV1pdY'
     }
 
     id = requests.post(url_ya_dialogs, files=files, headers=headers).json()
