@@ -1,9 +1,12 @@
 from flask import Flask, request
+from flask_sqlalchemy import SQLAlchemy
 import logging
 import json
 import requests
 
 app = Flask(__name__)
+
+db = SQLAlchemy(app)
 
 logging.basicConfig(level=logging.INFO, filename='app.log',
                     format='%(asctime)s %(levelname)s %(name)s %(message)s')
@@ -11,6 +14,30 @@ logging.basicConfig(level=logging.INFO, filename='app.log',
 session_storage = {}
 
 SKILL_ID = 'a38dddc2-b89a-4a22-8b93-f70ff53d31ed'
+
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unigue=True, nullable=False)
+    password_hash = db.Column(db.String(80), unique=False, nullable=False)
+
+    def __repr__(self):
+        return f'<User {self.id} {self.username}>'
+
+
+class Marker(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    map = db.Column(db.Integer(80), unique=False, nullable=False)
+    coords = db.Column(db.String(80), unique=False, nullable=False)
+    description = db.Column(db.String(1024), unigue=False, nullable=False)
+
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey('user.id'),
+                        nullable=False)
+    user = db.relationship('User', backref=db.backref('marker', lazy=True))
+
+    def __repr__(self):
+        return f'<Marker {self.id} {self.user_id}>'
 
 
 @app.route('/post', methods=['POST'])
@@ -77,6 +104,16 @@ def set_marker(coord):
 
     return id['image']['id']
 
+
+def registration():
+    pass
+
+
+def login():
+    pass
+
+
+db.create_all()
 
 if __name__ == '__main__':
     app.run()
