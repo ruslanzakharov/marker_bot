@@ -43,7 +43,7 @@ def handle_dialog(res, req):
     map = set_marker(req_text)
 
     res['response']['text'] = 'Фото'
-    res['card'] = {
+    res['response']['card'] = {
         'type': 'BigImage',
         'image_id': map,
     }
@@ -60,6 +60,7 @@ def set_marker(coord):
     params = {
         'l': 'sat,skl',
         'll': coord,
+        'pt': f'{coord},pm2dgl'
     }
 
     map = requests.get(url_static_api, params).content
