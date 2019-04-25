@@ -6,7 +6,9 @@ import json
 import requests
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite: ///main.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///main.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = 'sdflgnern3j242pn'
 db = SQLAlchemy(app)
 
 logging.basicConfig(level=logging.INFO, filename='app.log',
@@ -22,7 +24,7 @@ SKILL_ID = 'a38dddc2-b89a-4a22-8b93-f70ff53d31ed'
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unigue=True, nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(80), unique=False, nullable=False)
 
     def __repr__(self):
@@ -31,9 +33,9 @@ class User(db.Model):
 
 class Marker(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    map = db.Column(db.Integer(80), unique=False, nullable=False)
-    coords = db.Column(db.String(80), unique=False, nullable=False)
-    description = db.Column(db.String(1024), unigue=False, nullable=False)
+    map = db.Column(db.Integer, unique=False, nullable=False)
+    coord = db.Column(db.String(80), unique=False, nullable=False)
+    description = db.Column(db.String(1024), unique=False, nullable=True)
 
     user_id = db.Column(db.Integer,
                         db.ForeignKey('user.id'),
@@ -71,12 +73,10 @@ def handle_dialog(res, req):
         res['response']['buttons'] = [
             {
                 'title': 'Регистрация',
-                'payload': {'Регистрация': True},
                 'hide': True
             },
             {
                 'title': 'Вход',
-                'payload': {'Вход': True},
                 'hide': True
             }
         ]
@@ -86,13 +86,13 @@ def handle_dialog(res, req):
     req_text = req['request']['original_utterance']
 
     # Регистрация
-    if req_text == 'Регистрация' and req['request']['payload']:
+    if req_text == 'Регистрация':
         res['response']['text'] = 'Введите имя и пароль через пробел'
         session_storage['Регистрация'] = True
 
         return
 
-    if session_storage['Регистрация']:
+    if session_storage.get('Регистрация'):
         username, password = req_text.split()
 
         password_hash = generate_password_hash(password)
@@ -111,47 +111,134 @@ def handle_dialog(res, req):
         res['response']['buttons'] = [
             {
                 'title': 'Вход',
-                'payload': {'Вход': True},
                 'hide': True
             }
         ]
 
-    # Вход
-    if req_text == 'Вход' and req['request']['payload']:
-        res['response']['text'] = 'Введите имя и пароль через пробел'
-        session_storage['Войти'] = True
+        session_storage.pop('Регистрация')
 
         return
 
-    if session_storage['Войти']:
+    # Вход
+    if req_text == 'Вход':
+        res['response']['text'] = 'Введите имя и пароль через пробел'
+        session_storage['Вход'] = True
+
+        return
+
+    if session_storage.get('Вход'):
         username, password = req_text.split()
         user = User.query.filter_by(username=username).first()
 
         if user:
-            session['username'] = user.username
+            session_storage['username'] = user.username
+            session_storage['user_id'] = user.id
 
         res['response']['text'] = 'Вы вошли'
         res['response']['buttons'] = [
             {
-                'title': 'Вход',
-                'payload': {'Вход': True},
+                'title': 'Создать метку',
+                'hide': True
+            },
+            {
+                'title': 'Показать метку',
                 'hide': True
             }
         ]
 
-    map = set_marker(req_text)
+        session_storage.pop('Вход')
 
-    res['response']['text'] = 'Фото'
-    res['response']['card'] = {
-        'type': 'BigImage',
-        'image_id': map,
-    }
+        return
 
-    return
+    # Создание метки
+    if req_text == 'Создать метку':
+        res['response']['text'] = 'Введите широту и долготу через пробел'
+        session_storage['Создание метки'] = True
+
+        return
+
+    # Ввод координат
+    if session_storage.get('Создание метки') and\
+            not session_storage.get('Метка'):
+        coord = req_text.split()
+
+        map = set_marker(coord)
+
+        # res['response']['text'] = map
+        # res['response']['card'] = {
+        #     'type': 'BigImage',
+        #     'image_id': map,
+        # }
+
+        res['response']['text'] = 'Введите описание'
+
+        session_storage['Метка'] = {
+            'yandex_id': map,
+            'coord': ' '.join(coord)
+        }
+
+        return
+
+    # Ввод описания, создание метки
+    if session_storage.get('Метка') and\
+            session_storage.get('Метка'):
+        map = session_storage['Метка']['yandex_id']
+
+        marker = Marker(
+            map=map,
+            coord=session_storage['Метка']['coord'],
+            description=req_text,
+            user_id=session_storage['user_id']
+        )
+
+        db.session.add(marker)
+        db.session.commit()
+
+        res['response']['text'] = f'Метка {map} создана'
+        res['response']['buttons'] = [
+            {
+                'title': 'Показать метку',
+                'hide': True
+            },
+            {
+                'title': 'Создать метку',
+                'hide': True
+            }
+        ]
+
+        session_storage.pop('Метка')
+        session_storage.pop('Создание метки')
+
+        return
+
+    # Показываем метку
+    if req_text == 'Показать метку':
+        res['response']['text'] = 'Введите id метки'
+        session_storage['Показать метку'] = True
+
+        return
+
+    if session_storage.get('Показать метку'):
+        marker = Marker.query.filter_by(map=req_text).first()
+
+        res['response']['text'] = 'Карта'
+        res['response']['card'] = {
+            'type': 'BigImage',
+            'image_id': marker.map,
+            'description': marker.description,
+            'title': marker.map
+        }
+
+        return
+
+    res['response']['text'] = 'Эрмил вас не понял'
 
 
 def set_marker(coord):
-    """Создает карту с меткой"""
+    """Вовзращает id карты с указанным координатами из Яндекс.Диалоги"""
+
+    # Меняем широту и долготу из-за static api
+    coord = ','.join(reversed(coord))
 
     # Получаем изображение карты с меткой
     url_static_api = 'https://static-maps.yandex.ru/1.x/'
@@ -177,6 +264,12 @@ def set_marker(coord):
     return id['image']['id']
 
 
+def is_button(req):
+    if req['request']['type'] == 'ButtonPressed':
+        return True
+    return False
+
+
 def registration():
     pass
 
@@ -184,8 +277,6 @@ def registration():
 def login():
     pass
 
-
-db.create_all()
 
 if __name__ == '__main__':
     app.run()
