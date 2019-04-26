@@ -77,10 +77,6 @@ def handle_dialog(res, req):
                 'title': 'Вход',
                 'hide': True
             },
-            {
-                'title': 'Справка',
-                'hide': True
-            }
         ]
 
         return
@@ -177,6 +173,10 @@ def handle_dialog(res, req):
                 'title': 'Вход',
                 'hide': True
             },
+            {
+                'title': 'Справка',
+                'hide': True
+            }
         ]
 
         return
@@ -212,13 +212,21 @@ def handle_dialog(res, req):
     # Ввод координат
     if session_storage.get('Создание метки') and\
             not session_storage.get('Метка'):
+        res['response'].pop('buttons')
+
         if len(req_text.split()) != 2:
             res['response']['text'] = 'Эрмил вас не понял, введите еще раз'
+
             return
 
         coord = req_text.split()
 
         map = set_marker(coord)
+
+        if not map:
+            res['response']['text'] = 'Эрмил вас не понял, введите еще раз'
+
+            return
 
         res['response']['text'] = 'Введите описание'
 
@@ -226,8 +234,6 @@ def handle_dialog(res, req):
             'yandex_id': map,
             'coord': ' '.join(coord)
         }
-
-        res['response'].pop('buttons')
 
         return
 
@@ -267,6 +273,8 @@ def handle_dialog(res, req):
 
         if not marker:
             res['response']['text'] = 'Такой метки нет, введите еще раз'
+            res['response'].pop('buttons')
+
             return
 
         description = marker.description + '\n' + marker.coord
@@ -296,6 +304,8 @@ def handle_dialog(res, req):
 
         if not marker:
             res['response']['text'] = 'Такой метки нет, введите еще раз'
+            res['response'].pop('buttons')
+
             return
 
         delete_img(marker.map)
@@ -317,6 +327,7 @@ def handle_dialog(res, req):
     # Если ответ не сформирован
     if not res['response'].get('text'):
         res['response']['text'] = 'Эрмил вас не понял'
+
         return
 
 
@@ -335,7 +346,12 @@ def set_marker(coord):
         'pt': f'{coord},pm2dgl'
     }
 
-    map = requests.get(url_static_api, params).content
+    map_req = requests.get(url_static_api, params)
+    map = map_req.content
+
+    # ошибка 4xx
+    if str(map_req.status_code)[0] == '4':
+        return None
 
     # Размещаем изображение в Яндекс.Диалоги и получаем id
     url_ya_dialogs = f'https://dialogs.yandex.net/api/v1/skills/{SKILL_ID}/images'
