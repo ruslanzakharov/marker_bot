@@ -78,10 +78,21 @@ def handle_dialog(res, req):
             {
                 'title': 'Вход',
                 'hide': True
+            },
+            {
+                'title': 'Справка',
+                'hide': True
             }
         ]
 
         return
+
+    res['request']['buttons'] = [
+        {
+            'title': 'Справка',
+            'hide': True
+        }
+    ]
 
     req_text = req['request']['original_utterance']
 
@@ -93,7 +104,17 @@ def handle_dialog(res, req):
         return
 
     if session_storage.get('Регистрация'):
+        if len(req_text.split()) != 2:
+            res['response']['text'] = 'Эрмил вас не понял, введите еще раз'
+            return
+
         username, password = req_text.split()
+
+        # Проверка на существование
+        user = User.query.filter_by(username=username).first()
+        if user:
+            res['response']['text'] = 'Имя занято, придумайте другое'
+            return
 
         password_hash = generate_password_hash(password)
 
@@ -108,7 +129,7 @@ def handle_dialog(res, req):
         session_storage['Регистрация'] = False
 
         res['response']['text'] = 'Вы зарегистрировались, можете войти'
-        res['response']['buttons'] = [
+        res['response']['buttons'] += [
             {
                 'title': 'Вход',
                 'hide': True
@@ -127,15 +148,23 @@ def handle_dialog(res, req):
         return
 
     if session_storage.get('Вход'):
+        if len(req_text.split()) != 2:
+            res['response']['text'] = 'Эрмил вас не понял, введите еще раз'
+            return
+
         username, password = req_text.split()
         user = User.query.filter_by(username=username).first()
 
-        if user:
-            session_storage['username'] = user.username
-            session_storage['user_id'] = user.id
+        if not user:
+            res['response']['text'] = 'Такого пользователя нет, введите еще раз'
+            return
+
+        # Отмечаем пользователя
+        session_storage['username'] = user.username
+        session_storage['user_id'] = user.id
 
         res['response']['text'] = 'Вы вошли'
-        res['response']['buttons'] = [
+        res['response']['buttons'] += [
             {
                 'title': 'Создать метку',
                 'hide': True
@@ -160,15 +189,13 @@ def handle_dialog(res, req):
     # Ввод координат
     if session_storage.get('Создание метки') and\
             not session_storage.get('Метка'):
+        if len(req_text.split()) != 2:
+            res['response']['text'] = 'Эрмил вас не понял, введите еще раз'
+            return
+
         coord = req_text.split()
 
         map = set_marker(coord)
-
-        # res['response']['text'] = map
-        # res['response']['card'] = {
-        #     'type': 'BigImage',
-        #     'image_id': map,
-        # }
 
         res['response']['text'] = 'Введите описание'
 
@@ -195,7 +222,7 @@ def handle_dialog(res, req):
         db.session.commit()
 
         res['response']['text'] = f'Метка {map} создана'
-        res['response']['buttons'] = [
+        res['response']['buttons'] += [
             {
                 'title': 'Показать метку',
                 'hide': True
@@ -220,6 +247,10 @@ def handle_dialog(res, req):
 
     if session_storage.get('Показать метку'):
         marker = Marker.query.filter_by(map=req_text).first()
+
+        if not marker:
+            res['response']['text'] = 'Такой метки нет, введите еще раз'
+            return
 
         res['response']['text'] = 'Карта'
         res['response']['card'] = {
@@ -262,20 +293,6 @@ def set_marker(coord):
     id = requests.post(url_ya_dialogs, files=files, headers=headers).json()
 
     return id['image']['id']
-
-
-def is_button(req):
-    if req['request']['type'] == 'ButtonPressed':
-        return True
-    return False
-
-
-def registration():
-    pass
-
-
-def login():
-    pass
 
 
 if __name__ == '__main__':
