@@ -14,8 +14,7 @@ db = SQLAlchemy(app)
 logging.basicConfig(level=logging.INFO, filename='app.log',
                     format='%(asctime)s %(levelname)s %(name)s %(message)s')
 
-session_storage = {
-}
+session_storage = {}
 
 SKILL_ID = 'a38dddc2-b89a-4a22-8b93-f70ff53d31ed'
 
@@ -83,9 +82,20 @@ def handle_dialog(res, req):
 
     req_text = req['request']['original_utterance']
 
+    # Отменяем текущие операции
+    if req_text == 'Отмена':
+        res['response']['text'] = 'Отменено'
+        delete_operations()
+
     # Регистрация
     if req_text == 'Регистрация' and not session_storage.get('username'):
         res['response']['text'] = 'Введите имя и пароль через пробел'
+        res['response']['buttons'] = [
+            {
+                'title': 'Отмена',
+                'hide': True
+            }
+        ]
         session_storage['Регистрация'] = True
 
         return
@@ -130,6 +140,12 @@ def handle_dialog(res, req):
     # Вход
     if req_text == 'Вход' and not session_storage.get('username'):
         res['response']['text'] = 'Введите имя и пароль через пробел'
+        res['response']['buttons'] = [
+            {
+                'title': 'Отмена',
+                'hide': True
+            }
+        ]
         session_storage['Вход'] = True
 
         return
@@ -172,10 +188,6 @@ def handle_dialog(res, req):
             {
                 'title': 'Вход',
                 'hide': True
-            },
-            {
-                'title': 'Справка',
-                'hide': True
             }
         ]
 
@@ -208,15 +220,24 @@ def handle_dialog(res, req):
     if req_text == 'Создать метку':
         res['response']['text'] = 'Введите широту и долготу через пробел'
         session_storage['Создание метки'] = True
-
-        res['response'].pop('buttons')
+        res['response']['buttons'] = [
+            {
+                'title': 'Отмена',
+                'hide': True
+            }
+        ]
 
         return
 
     # Ввод координат
     if session_storage.get('Создание метки') and\
             not session_storage.get('Метка'):
-        res['response'].pop('buttons')
+        res['response']['buttons'] = [
+            {
+                'title': 'Отмена',
+                'hide': True
+            }
+        ]
 
         if len(req_text.split()) != 2:
             res['response']['text'] = 'Эрмил вас не понял, введите еще раз'
@@ -268,7 +289,12 @@ def handle_dialog(res, req):
         res['response']['text'] = 'Введите id метки'
         session_storage['Показать метку'] = True
 
-        res['response'].pop('buttons')
+        res['response']['buttons'] = [
+            {
+                'title': 'Отмена',
+                'hide': True
+            }
+        ]
 
         return
 
@@ -277,7 +303,12 @@ def handle_dialog(res, req):
 
         if not marker:
             res['response']['text'] = 'Такой метки нет, введите еще раз'
-            res['response'].pop('buttons')
+            res['response']['buttons'] = [
+                {
+                    'title': 'Отмена',
+                    'hide': True
+                }
+            ]
 
             return
 
@@ -299,7 +330,12 @@ def handle_dialog(res, req):
         res['response']['text'] = 'Введите id метки'
         session_storage['Удалить метку'] = True
 
-        res['response'].pop('buttons')
+        res['response']['buttons'] = [
+            {
+                'title': 'Отмена',
+                'hide': True
+            }
+        ]
 
         return
 
@@ -308,7 +344,12 @@ def handle_dialog(res, req):
 
         if not marker:
             res['response']['text'] = 'Такой метки нет, введите еще раз'
-            res['response'].pop('buttons')
+            res['response']['buttons'] = [
+                {
+                    'title': 'Отмена',
+                    'hide': True
+                }
+            ]
 
             return
 
@@ -342,7 +383,7 @@ def handle_dialog(res, req):
         return
 
     # Если ответ не сформирован
-    if not res['response'].get('text'):
+    if 'text' not in res['response']:
         res['response']['text'] = 'Эрмил вас не понял'
 
         return
@@ -396,6 +437,18 @@ def delete_img(id):
     if result.get('result') == 'ok':
         return True
     return False
+
+
+def delete_operations():
+    if 'username' not in session_storage:
+        session_storage.clear()
+        return
+
+    s_st_copy = session_storage.copy()
+
+    for key in s_st_copy:
+        if key != 'username' and key != 'user_id':
+            session_storage.pop(key)
 
 
 if __name__ == '__main__':
