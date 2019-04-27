@@ -227,9 +227,13 @@ def handle_dialog(res, req):
                 'hide': True
             },
             {
+                'title': 'Выйти',
+                'hide': True
+            },
+            {
                 'title': 'Справка',
                 'hide': True
-            }
+            },
         ]
 
     # Создание метки
@@ -390,6 +394,27 @@ def handle_dialog(res, req):
             res['response']['text'] = result
         else:
             res['response']['text'] = 'У вас нет закладок. Немного ошибся - меток'
+
+        return
+
+    if req_text == 'Выйти':
+        session_storage.clear()
+
+        res['response']['text'] = 'Зарегистрируйтесь или войдите'
+        res['response']['buttons'] = [
+            {
+                'title': 'Регистрация',
+                'hide': True
+            },
+            {
+                'title': 'Вход',
+                'hide': True
+            },
+            {
+                'title': 'Справка',
+                'hide': True
+            },
+        ]
 
         return
 
