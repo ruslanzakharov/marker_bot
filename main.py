@@ -76,6 +76,10 @@ def handle_dialog(res, req):
                 'title': 'Вход',
                 'hide': True
             },
+            {
+                'title': 'Справка',
+                'hide': True
+            },
         ]
 
         return
@@ -176,10 +180,18 @@ def handle_dialog(res, req):
 
         # return не пишем, т.к. формируем кнопки ниже
 
+    if req_text == 'Справка':
+        res['response']['text'] = 'Вы можете создавать метки на карте по их' \
+                                  ' координатам, делиться ими с другими.' \
+                                  ' Все, что там может находиться, ограничи' \
+                                  'вается лишь вашей фантазией :)'
+
     # Добавляем различные кнопки
     # Отсекаем возможность работы без входа в аккаунт
     if not session_storage.get('username'):
-        res['response']['text'] = 'Вы не вошли'
+        # Если текст еще не сформирован
+        if 'text' not in res['response']:
+            res['response']['text'] = 'Вы не вошли'
         res['response']['buttons'] = [
             {
                 'title': 'Регистрация',
@@ -188,7 +200,11 @@ def handle_dialog(res, req):
             {
                 'title': 'Вход',
                 'hide': True
-            }
+            },
+            {
+                'title': 'Справка',
+                'hide': True
+            },
         ]
 
         return
@@ -378,7 +394,10 @@ def handle_dialog(res, req):
         return
 
     if req_text == 'Справка':
-        res['response']['text'] = 'Какая-то справка'
+        res['response']['text'] = 'Вы можете создавать метки на карте по их' \
+                                  ' координатам, делиться ими с другими.' \
+                                  ' Все, что там может находиться, ограничи' \
+                                  'вается лишь вашей фантазией :)'
 
         return
 
