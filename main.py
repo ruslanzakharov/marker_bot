@@ -195,6 +195,10 @@ def handle_dialog(res, req):
                 'hide': True
             },
             {
+                'title': 'Мои метки',
+                'hide': True
+            },
+            {
                 'title': 'Справка',
                 'hide': True
             }
@@ -316,6 +320,19 @@ def handle_dialog(res, req):
         res['response']['text'] = 'Метка удалена'
 
         session_storage.pop('Удалить метку')
+
+        return
+
+    if req_text == 'Мои метки':
+        markers = Marker.query.filter_by(
+            user_id=session_storage['user_id']).all()
+
+        result = '\n'.join(marker.map for marker in markers)
+
+        if result:
+            res['response']['text'] = result
+        else:
+            res['response']['text'] = 'У вас нет закладок. Немного ошибся - меток'
 
         return
 
