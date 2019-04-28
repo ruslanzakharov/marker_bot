@@ -4,11 +4,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import logging
 import json
 import requests
+import config
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///main.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'sdflgnern3j242pn'
+app.config['SECRET_KEY'] = config.SECRET_KEY
 db = SQLAlchemy(app)
 
 logging.basicConfig(level=logging.INFO, filename='app.log',
@@ -16,7 +17,7 @@ logging.basicConfig(level=logging.INFO, filename='app.log',
 
 session_storage = {}
 
-SKILL_ID = 'a38dddc2-b89a-4a22-8b93-f70ff53d31ed'
+SKILL_ID = config.SKILL_ID
 
 
 class User(db.Model):
@@ -66,7 +67,10 @@ def handle_dialog(res, req):
     """Обрабатывает запрос"""
 
     if req['session']['new']:
-        res['response']['text'] = 'Зарегистрируйтесь или войдите'
+        res['response']['text'] = 'Я могу создавать метки на карте, ' \
+                                  'по местоположению которых находится ' \
+                                  'что-либо.' \
+                                  '\nЗарегистрируйтесь или войдите'
         res['response']['buttons'] = [
             {
                 'title': 'Регистрация',
@@ -77,9 +81,13 @@ def handle_dialog(res, req):
                 'hide': True
             },
             {
-                'title': 'Справка',
+                'title': 'Что ты умеешь?',
                 'hide': True
             },
+            {
+                'title': 'Помощь',
+                'hide': True
+            }
         ]
 
         return
@@ -134,6 +142,14 @@ def handle_dialog(res, req):
             {
                 'title': 'Вход',
                 'hide': True
+            },
+            {
+                'title': 'Что ты умеешь?',
+                'hide': True
+            },
+            {
+                'title': 'Помощь',
+                'hide': True
             }
         ]
 
@@ -180,11 +196,16 @@ def handle_dialog(res, req):
 
         # return не пишем, т.к. формируем кнопки ниже
 
-    if req_text == 'Справка':
-        res['response']['text'] = 'Вы можете создавать метки на карте по их' \
+    if req_text == 'Что ты умеешь?':
+        res['response']['text'] = 'Я могу создавать метки на карте по их' \
                                   ' координатам, делиться ими с другими.' \
                                   ' Все, что там может находиться, ограничи' \
                                   'вается лишь вашей фантазией :)'
+
+    if req_text == 'Помощь':
+        res['response']['text'] = 'Вся работа с навыком выполняется через' \
+                                  ' кнопки. Название метки (ее id) - длинный' \
+                                  ' набор символов'
 
     # Добавляем различные кнопки
     # Отсекаем возможность работы без входа в аккаунт
@@ -202,9 +223,13 @@ def handle_dialog(res, req):
                 'hide': True
             },
             {
-                'title': 'Справка',
+                'title': 'Что ты умеешь?',
                 'hide': True
             },
+            {
+                'title': 'Помощь',
+                'hide': True
+            }
         ]
 
         return
@@ -231,9 +256,13 @@ def handle_dialog(res, req):
                 'hide': True
             },
             {
-                'title': 'Справка',
+                'title': 'Что ты умеешь?',
                 'hide': True
             },
+            {
+                'title': 'Помощь',
+                'hide': True
+            }
         ]
 
     # Создание метки
@@ -393,7 +422,7 @@ def handle_dialog(res, req):
         if result:
             res['response']['text'] = result
         else:
-            res['response']['text'] = 'У вас нет закладок. Немного ошибся - меток'
+            res['response']['text'] = 'У вас нет меток'
 
         return
 
@@ -411,15 +440,19 @@ def handle_dialog(res, req):
                 'hide': True
             },
             {
-                'title': 'Справка',
+                'title': 'Что ты умеешь?',
                 'hide': True
             },
+            {
+                'title': 'Помощь',
+                'hide': True
+            }
         ]
 
         return
 
-    if req_text == 'Справка':
-        res['response']['text'] = 'Вы можете создавать метки на карте по их' \
+    if req_text == 'Что ты умеешь?':
+        res['response']['text'] = 'Я могу создавать метки на карте по их' \
                                   ' координатам, делиться ими с другими.' \
                                   ' Все, что там может находиться, ограничи' \
                                   'вается лишь вашей фантазией :)'
@@ -473,7 +506,7 @@ def delete_img(id):
     url_ya_dialogs += id
 
     headers = {
-        'Authorization': 'OAuth AQAAAAATNA8lAAT7o-7tTToNjUOljgg7VeV1pdY'
+        'Authorization': config.OAUTH
     }
 
     result = requests.delete(url_ya_dialogs, headers=headers).json()
